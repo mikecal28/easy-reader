@@ -8,7 +8,7 @@ function Reader(props) {
   const [storageCheck, setStorageCheck] = useState("");
   const [play, setPlay] = useState(false);
   const [delay, setDelay] = useState(1000);
-  const [factor, setFactor] = useState(0.7);
+  const [factor, setFactor] = useState(0.5);
   const [miniNum, setMiniNum] = useState(0);
 
   const { resume, setResume } = props;
@@ -23,7 +23,9 @@ function Reader(props) {
 
   const renderCaptions = () => {
     return textArray
-      ? textArray.map((sentence, idx) => <div key={idx}>{sentence}</div>)
+      ? textArray.map((sentence, idx) => (
+          <div key={idx}>{sentence.replace("¶", "")}</div>
+        ))
       : "nothing";
   };
 
@@ -45,15 +47,23 @@ function Reader(props) {
   // }, [storageArray]);
 
   const renderStorage = () => {
+    let toggler = true;
     return storageArray
-      ? storageArray.map((sentence, idx) => (
-          <div
-            key={idx}
-            className={idx + 1 < storageArray.length ? "hidden" : "sentence"}
-          >
-            {sentence}
-          </div>
-        ))
+      ? storageArray.map((sentence, idx) => {
+          const color = toggler === true ? "red" : "skyblue";
+          if (sentence.includes("¶")) {
+            toggler = !toggler;
+          }
+          return (
+            <div
+              key={idx}
+              className={idx + 1 < storageArray.length ? "hidden" : "sentence"}
+              style={{ backgroundColor: color }}
+            >
+              {sentence.replace("¶", "")}
+            </div>
+          );
+        })
       : "nothing";
   };
 
@@ -104,11 +114,17 @@ function Reader(props) {
 
   useEffect(() => {
     if (save) {
-      const removeLineBreaks = captions.replace(/(\r\n|\n|\r)/gm, "");
-      const tempArr = removeLineBreaks
-        .replace(/([.?!])\s*(?=[A-Z])/g, "$1|")
+      localStorage.clear();
+      // const splitIntoParagraphs = captions.split("¶");
+      // console.log(splitIntoParagraphs);
+      const removeLineBreaks = captions
+        .replace(/(\r\n|\n|\r)/gm, " ")
+        .replace(/(. ")/g, '.|"')
+        .replace(/(\? ")/g, '?|"')
+        .replace(/(! ")/g, '!|"')
+        .replace(/([.?!¶])\s*(?=[A-Z"])(")*/g, "$1$2|")
         .split("|");
-      setTextArray(tempArr);
+      setTextArray(removeLineBreaks);
       setSave(false);
     }
   }, [save, captions]);
@@ -124,14 +140,16 @@ function Reader(props) {
   // }, [textArray]);
 
   useEffect(() => {
-    const miniInterval = setInterval(() => {
-      let tempMiniNum = miniNum;
-      tempMiniNum = ++tempMiniNum;
-      if (play) {
-        // console.log("Time: ", tempMiniNum);
-      }
-      setMiniNum(tempMiniNum);
-    }, 1000);
+    const miniInterval = play
+      ? setInterval(() => {
+          let tempMiniNum = miniNum;
+          tempMiniNum = ++tempMiniNum;
+          if (play) {
+            // console.log("Time: ", tempMiniNum);
+          }
+          setMiniNum(tempMiniNum);
+        }, 1000)
+      : null;
 
     return () => clearInterval(miniInterval);
   }, [storageArray, play, miniNum]);
@@ -139,6 +157,10 @@ function Reader(props) {
   useEffect(() => {
     setMiniNum(0);
   }, [storageArray, play]);
+
+  useEffect(() => {
+    console.log("factor: ", factor);
+  }, [factor]);
 
   return (
     <div className="reader">
@@ -155,6 +177,14 @@ function Reader(props) {
         : ""}
       <div>{miniNum}</div>
       <div>{Math.floor(delay / 1000)}</div>
+      <input
+        type="range"
+        min={0.1}
+        max={0.9}
+        step={0.1}
+        value={factor}
+        onChange={(e) => setFactor(e.target.value)}
+      />
     </div>
   );
 }
