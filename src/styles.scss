@@ -1,6 +1,12 @@
 .app {
   background-color: red;
 
+  textarea {
+    resize: none;
+    width: 50vw;
+    height: max(20vw, 15rem);
+  }
+
   .reader {
     display: flex;
     flex-direction: column;
@@ -9,10 +15,10 @@
     background-color: yellow;
 
     .sentence {
-      // animation: fade 2s;
       display: block;
       font-size: 2rem;
       text-align: center;
+      width: 50vw;
     }
 
     .hidden {

@@ -4,30 +4,48 @@ function Reader(props) {
   const [captions, setCaptions] = useState("");
   const [textArray, setTextArray] = useState([]);
   const [storageArray, setStorageArray] = useState([]);
-  const [save, setSave] = useState(false);
+
   const [storageCheck, setStorageCheck] = useState("");
   const [play, setPlay] = useState(false);
   const [delay, setDelay] = useState(1000);
   const [factor, setFactor] = useState(0.5);
   const [miniNum, setMiniNum] = useState(0);
+  const [clear, setClear] = useState(false);
 
-  const { resume, setResume } = props;
+  const { resume, setResume, save, setSave } = props;
 
   const handleChange = (e) => {
     setCaptions(e.target.value);
   };
 
-  const handleSave = () => {
-    setSave(true);
-  };
+  // const renderCaptions = () => {
+  //   return textArray
+  //     ? textArray.map((sentence, idx) => (
+  //         <div key={idx}>{sentence.replace("¶", "")}</div>
+  //       ))
+  //     : "nothing";
+  // };
 
-  const renderCaptions = () => {
-    return textArray
-      ? textArray.map((sentence, idx) => (
-          <div key={idx}>{sentence.replace("¶", "")}</div>
-        ))
-      : "nothing";
-  };
+  // const renderCaptions = () => {
+  //   let toggler = true;
+  //   return textArray
+  //     ? textArray.map((sentence, idx) => {
+  //         const color = toggler === true ? "red" : "skyblue";
+  //         if (sentence.includes("¶")) {
+  //           toggler = !toggler;
+  //         }
+  //         return (
+  //           <div
+  //             key={idx}
+  //             className={idx + 1 < textArray.length ? "hidden" : "sentence"}
+  //             style={{ backgroundColor: color }}
+  //           >
+  //             {sentence.replace("¶", "")}
+  //           </div>
+  //         );
+  //       })
+  //     : "nothing";
+  // };
 
   const count = (word) => {
     word = word.toLowerCase();
@@ -48,7 +66,14 @@ function Reader(props) {
 
   const renderStorage = () => {
     let toggler = true;
-    return storageArray
+    const currentArray =
+      storageArray?.length > 0
+        ? storageArray
+        : textArray?.length > 0
+        ? textArray
+        : [];
+    console.log("storageArray: ", storageArray);
+    return currentArray?.length > 0
       ? storageArray.map((sentence, idx) => {
           const color = toggler === true ? "red" : "skyblue";
           if (sentence.includes("¶")) {
@@ -68,53 +93,75 @@ function Reader(props) {
   };
 
   useEffect(() => {
-    let num = resume;
-    const interval = setInterval(() => {
-      const storageLength = Object.keys(localStorage).length;
-      if (num < storageLength) {
-        if (!play) {
-          // console.log("paused");
-        } else {
-          num = ++num;
-          let current = localStorage.getItem(num);
-          let currentWords = current.split(" ");
-          let countArray = currentWords.map((word) => count(word));
-          const filteredArray = countArray.filter((x) => {
-            return x !== undefined;
-          });
-          const sum = filteredArray.reduce(
-            (partialSum, a) => partialSum + a,
-            0
-          );
-          let tempDelay = sum * 1000;
-          let factoredDelay = Math.floor(tempDelay * factor);
-          setDelay(factoredDelay);
-          // console.log(filteredArray);
-          // console.log("sum: ", sum);
-          // console.log("factored: ", Math.floor(factoredDelay / 1000));
-          setResume(num);
-          setStorageArray((arr) => [...arr, localStorage.getItem(num)]);
-        }
-      } else {
-        return;
-      }
-    }, delay);
-
-    return () => clearInterval(interval);
-  }, [play, resume, setResume, delay, factor]);
+    if (clear) {
+      setSave(false);
+      setResume(-1);
+      setClear(false);
+    }
+  }, [clear]);
 
   useEffect(() => {
-    const firstItem = localStorage.getItem(1);
-    setStorageCheck(firstItem ? firstItem : "");
-  }, []);
+    let resumePoint;
+    if (localStorage.getItem("resumePoint") == null) {
+      resumePoint = resume;
+    } else {
+      resumePoint = localStorage.getItem("resumePoint");
+    }
+    console.log("resumePoint: ", resumePoint);
 
-  // useEffect(() => {
-  //   console.log(storageCheck);
-  // }, [storageCheck]);
+    const interval = play
+      ? setInterval(() => {
+          const storageLength = Object.keys(localStorage).length;
+          if (!play) {
+            console.log("true pause");
+          } else if (resumePoint < storageLength) {
+            setResume((r) => (r += 1));
+            let current = localStorage.getItem(resumePoint);
+            console.log("current: ", current);
+            let currentWords = current.split(" ");
+            let countArray = currentWords.map((word) => count(word));
+            const filteredArray = countArray.filter((x) => {
+              return x !== undefined;
+            });
+            const sum = filteredArray.reduce(
+              (partialSum, a) => partialSum + a,
+              0
+            );
+            let tempDelay = sum * 1000;
+            let factoredDelay = Math.floor(tempDelay * factor);
+            setDelay(factoredDelay);
+
+            // console.log(filteredArray);
+            // console.log("sum: ", sum);
+            // console.log("factored: ", Math.floor(factoredDelay / 1000));
+            setStorageArray((arr) => {
+              console.log("resume: ", resume);
+              console.log(
+                "Pushing to storageArray: ",
+                localStorage.getItem(resumePoint)
+              );
+              return [...arr, localStorage.getItem(resumePoint)];
+            });
+          } else {
+            console.log("doing nothing");
+            return;
+          }
+        }, delay)
+      : null;
+
+    return () => {
+      localStorage.setItem("resumePoint", resume);
+      clearInterval(interval);
+    };
+  }, [play, resume, delay, factor]);
+
+  useEffect(() => {
+    const firstItem = localStorage.getItem(0);
+    setStorageCheck(firstItem);
+  }, [clear, save]);
 
   useEffect(() => {
     if (save) {
-      localStorage.clear();
       // const splitIntoParagraphs = captions.split("¶");
       // console.log(splitIntoParagraphs);
       const removeLineBreaks = captions
@@ -125,7 +172,10 @@ function Reader(props) {
         .replace(/([.?!¶])\s*(?=[A-Z"])(")*/g, "$1$2|")
         .split("|");
       setTextArray(removeLineBreaks);
-      setSave(false);
+      // setSave(false);
+    } else if (!save) {
+      localStorage.clear();
+      setStorageArray([]);
     }
   }, [save, captions]);
 
@@ -133,7 +183,7 @@ function Reader(props) {
     textArray.forEach((sentence, idx) => {
       return localStorage.setItem(idx, sentence);
     });
-  }, [textArray]);
+  }, [textArray, save, clear]);
 
   // useEffect(() => {
   //   console.log(textArray);
@@ -164,17 +214,20 @@ function Reader(props) {
 
   return (
     <div className="reader">
+      <button onClick={() => setClear(true)}>Clear</button>
       <h2>Reader</h2>
-      <textarea placeholder="Input Book Chapter..." onChange={handleChange} />
+      {!save && !storageCheck && (
+        <textarea
+          placeholder="Input Book Chapter..."
+          onChange={handleChange}
+          value={captions}
+        />
+      )}
       <button onClick={() => setPlay((p) => !p)}>
         {play ? "Pause" : "Play"}
       </button>
-      <button onClick={handleSave}>Save</button>
-      {storageCheck
-        ? renderStorage()
-        : !storageCheck && textArray
-        ? renderCaptions()
-        : ""}
+      <button onClick={() => setSave((s) => !s)}>Save</button>
+      {renderStorage()}
       <div>{miniNum}</div>
       <div>{Math.floor(delay / 1000)}</div>
       <input

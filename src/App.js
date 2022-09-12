@@ -1,17 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Reader from "./Components/Reader";
 
 function App() {
-  const [play, setPlay] = useState(false);
-  const [resume, setResume] = useState(0);
+  const [start, setStart] = useState(false);
+  const [resume, setResume] = useState(-1);
+  const [save, setSave] = useState(false);
+
+  useEffect(() => {
+    const resumePoint = localStorage.getItem("resumePoint");
+    if (save && !start) {
+      if (resumePoint != null) {
+        console.log("cool");
+        localStorage.setItem("resumePoint", resumePoint - 2);
+        setResume((r) => (r -= 2));
+      }
+    }
+  }, [start]);
 
   return (
     <div className="app">
       <h1>Easy Reader</h1>
-      <button onClick={() => setPlay((p) => !p)}>
-        {play ? "Stop" : "Start"}
+      <button onClick={() => setStart((p) => !p)}>
+        {start ? "Stop" : "Start"}
       </button>
-      {play && <Reader resume={resume} setResume={setResume} />}
+      {start && (
+        <Reader
+          resume={resume}
+          setResume={setResume}
+          save={save}
+          setSave={setSave}
+        />
+      )}
     </div>
   );
 }
