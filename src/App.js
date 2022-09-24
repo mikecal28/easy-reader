@@ -4,18 +4,17 @@ import Reader from "./Components/Reader";
 function App() {
   const [start, setStart] = useState(false);
   const [resume, setResume] = useState(-1);
-  const [save, setSave] = useState(false);
+  const [save, setSave] = useState(localStorage.getItem("1") ? true : false);
 
   useEffect(() => {
     const resumePoint = localStorage.getItem("resumePoint");
     if (save && !start) {
       if (resumePoint != null) {
-        console.log("cool");
         localStorage.setItem("resumePoint", resumePoint - 2);
         setResume((r) => (r -= 2));
       }
     }
-  }, [start]);
+  }, [save, start]);
 
   return (
     <div className="app">
